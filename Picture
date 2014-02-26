@@ -1,0 +1,802 @@
+/**
+ * K-Means and supporting functions author Kartik Menon
+ * /
+
+
+import java.awt.Color;
+import java.util.*;
+import java.awt.font.*;
+import java.awt.geom.*;
+import java.awt.image.BufferedImage;
+import java.lang.reflect.Array;
+import java.text.*;
+import java.util.Arrays;
+
+/**
+ * A class that represents a picture.  This class inherits from 
+ * SimplePicture and allows the student to add functionality to
+ * the Picture class.  
+ * 
+ * Copyright Georgia Institute of Technology 2004-2008
+ * @author Barbara Ericson ericson@cc.gatech.edu
+ */
+public class Picture extends SimplePicture { 
+
+  ///////////////////// constructors //////////////////////////////////
+  
+  /**
+   * Constructor that takes no arguments 
+   */
+  public Picture () {
+    
+    /* not needed but use it to show students the implicit call to super()
+     * child constructors always call a parent constructor 
+     */
+    super();  
+  }
+  
+  /**
+   * Constructor that takes a file name and creates the picture 
+   * @param fileName the name of the file to create the picture from
+   */
+  public Picture(String fileName) {
+    // let the parent class handle this fileName
+    super(fileName);
+  }
+  
+  /**
+   * Constructor that takes the width and height
+   * @param width the width of the desired picture
+   * @param height the height of the desired picture
+   */
+  public Picture(int width, int height) {
+    // let the parent class handle this width and height
+    super(width,height);
+  }
+  
+  /**
+   * Constructor that takes a picture and creates a 
+   * copy of that picture
+   */
+  public Picture(Picture copyPicture) {
+    // let the parent class do the copy
+    super(copyPicture);
+  }
+  
+  /**
+   * Constructor that takes a buffered image
+   * @param image the buffered image to use
+   */
+  public Picture(BufferedImage image) {
+    super(image);
+  }
+  
+  ////////////////////// methods ///////////////////////////////////////
+  
+  /**
+   * Method to return a string with information about this picture.
+   * @return a string with information about the picture such as fileName,
+   * height and width.
+   */
+  public String toString() {
+    String output = "Picture, filename " + getFileName() + 
+      " height " + getHeight() 
+      + " width " + getWidth();
+    return output;
+    
+  }
+  
+   /**
+   * Class method to let the user pick a file name and then create the picture 
+   * and show it
+   * @return the picture object
+   */
+  public static Picture pickAndShow() {
+    String fileName = FileChooser.pickAFile();
+    Picture picture = new Picture(fileName);
+    picture.show();
+    return picture;
+  }
+  
+  /**
+   * Class method to create a picture object from the passed file name and 
+   * then show it
+   * @param fileName the name of the file that has a picture in it
+   * @return the picture object
+   */
+  public static Picture showNamed(String fileName) {
+    Picture picture = new Picture(fileName);
+    picture.show();
+    return picture;
+  }
+  
+  /**
+   * A method create a copy of the current picture and return it
+   * @return the copied picture
+   */
+  public Picture copy()
+  {
+    return new Picture(this);
+  }
+  
+  /**
+   * Method to increase the red in a picture.
+   */
+  public void increaseRed() {
+    Pixel [] pixelArray = this.getPixels();
+    for (Pixel pixelObj : pixelArray) {
+      pixelObj.setRed(pixelObj.getRed()*2);
+    }
+  }
+  
+  /**
+   * Method to negate a picture
+   */
+  public void negate() {
+    Pixel [] pixelArray = this.getPixels();
+    int red,green,blue;
+    
+    for (Pixel pixelObj : pixelArray) {
+      red = pixelObj.getRed();
+      green = pixelObj.getGreen();
+      blue = pixelObj.getBlue();
+      pixelObj.setColor(new Color(255-red, 255-green, 255-blue));
+    }
+  }
+  
+  /**
+   * Method to flip a picture 
+   */
+  public Picture flip() {
+    Pixel currPixel = null;
+    Pixel targetPixel = null;
+    Picture target = 
+      new Picture(this.getWidth(),this.getHeight());
+    
+    for (int srcX = 0, trgX = getWidth()-1; 
+         srcX < getWidth();
+         srcX++, trgX--) {
+      for (int srcY = 0, trgY = 0; 
+           srcY < getHeight();
+           srcY++, trgY++) {
+        
+        // get the current pixel
+        currPixel = this.getPixel(srcX,srcY);
+        targetPixel = target.getPixel(trgX,trgY);
+        
+        // copy the color of currPixel into target
+        targetPixel.setColor(currPixel.getColor());
+      }
+    }
+    return target;
+  }
+  
+  /**
+   * Method to decrease the red by half in the current picture
+   */
+  public void decreaseRed() {
+  
+    Pixel pixel = null; // the current pixel
+    int redValue = 0;       // the amount of red
+
+    // get the array of pixels for this picture object
+    Pixel[] pixels = this.getPixels();
+
+    // start the index at 0
+    int index = 0;
+
+    // loop while the index is less than the length of the pixels array
+    while (index < pixels.length) {
+
+      // get the current pixel at this index
+      pixel = pixels[index];
+      // get the red value at the pixel
+      redValue = pixel.getRed();
+      // set the red value to half what it was
+      redValue = (int) (redValue * 0.5);
+      // set the red for this pixel to the new value
+      pixel.setRed(redValue);
+      // increment the index
+      index++;
+    }
+  }
+  
+  /**
+   * Method to decrease the red by an amount
+   * @param amount the amount to change the red by
+   */
+  public void decreaseRed(double amount) {
+ 
+    Pixel[] pixels = this.getPixels();
+    Pixel p = null;
+    int value = 0;
+
+    // loop through all the pixels
+    for (int i = 0; i < pixels.length; i++) {
+ 
+      // get the current pixel
+      p = pixels[i];
+      // get the value
+      value = p.getRed();
+      // set the red value the passed amount time what it was
+      p.setRed((int) (value * amount));
+    }
+  }
+  
+  /**
+   * Method to compose (copy) this picture onto a target picture
+   * at a given point.
+   * @param target the picture onto which we copy this picture
+   * @param targetX target X position to start at
+   * @param targetY target Y position to start at
+   */
+  public void compose(Picture target, int targetX, int targetY) {
+ 
+    Pixel currPixel = null;
+    Pixel newPixel = null;
+
+    // loop through the columns
+    for (int srcX=0, trgX = targetX; srcX < this.getWidth();
+         srcX++, trgX++) {
+  
+      // loop through the rows
+      for (int srcY=0, trgY=targetY; srcY < this.getHeight();
+           srcY++, trgY++) {
+
+        // get the current pixel
+        currPixel = this.getPixel(srcX,srcY);
+
+        /* copy the color of currPixel into target,
+         * but only if it'll fit.
+         */
+        if (trgX < target.getWidth() && trgY < target.getHeight()) {
+          newPixel = target.getPixel(trgX,trgY);
+          newPixel.setColor(currPixel.getColor());
+        }
+      }
+    }
+  }
+  
+  /**
+   * Method to scale the picture by a factor, and return the result
+   * @param factor the factor to scale by (1.0 stays the same,
+   *    0.5 decreases each side by 0.5, 2.0 doubles each side)
+   * @return the scaled picture
+   */
+  public Picture scale(double factor) {
+    
+    Pixel sourcePixel, targetPixel;
+    Picture canvas = new Picture(
+                                 (int) (factor*this.getWidth())+1,
+                                 (int) (factor*this.getHeight())+1);
+    // loop through the columns
+    for (double sourceX = 0, targetX=0;
+         sourceX < this.getWidth();
+         sourceX+=(1/factor), targetX++) {
+      
+      // loop through the rows
+      for (double sourceY=0, targetY=0;
+           sourceY < this.getHeight();
+           sourceY+=(1/factor), targetY++) {
+        
+        sourcePixel = this.getPixel((int) sourceX,(int) sourceY);
+        targetPixel = canvas.getPixel((int) targetX, (int) targetY);
+        targetPixel.setColor(sourcePixel.getColor());
+      }
+    }
+    return canvas;
+  }
+  
+  /**
+   * Method to do chromakey using an input color for the background
+   * and a point for the upper left corner of where to copy
+   * @param target the picture onto which we chromakey this picture
+   * @param bgColor the color to make transparent
+   * @param threshold within this distance from bgColor, make transparent
+   * @param targetX target X position to start at
+   * @param targetY target Y position to start at
+   */
+  public void chromakey(Picture target, Color bgColor, int threshold,
+                        int targetX, int targetY) {
+ 
+    Pixel currPixel = null;
+    Pixel newPixel = null;
+
+    // loop through the columns
+    for (int srcX=0, trgX=targetX;
+        srcX<getWidth() && trgX<target.getWidth();
+        srcX++, trgX++) {
+
+      // loop through the rows
+      for (int srcY=0, trgY=targetY;
+        srcY<getHeight() && trgY<target.getHeight();
+        srcY++, trgY++) {
+
+        // get the current pixel
+        currPixel = this.getPixel(srcX,srcY);
+
+        /* if the color at the current pixel is within threshold of
+         * the input color, then don't copy the pixel
+         */
+        if (currPixel.colorDistance(bgColor)>threshold) {
+          target.getPixel(trgX,trgY).setColor(currPixel.getColor());
+        }
+      }
+    }
+  }
+  
+    /**
+   * Method to do chromakey assuming a blue background 
+   * @param target the picture onto which we chromakey this picture
+   * @param targetX target X position to start at
+   * @param targetY target Y position to start at
+   */
+  public void blueScreen(Picture target,
+                        int targetX, int targetY) {
+
+    Pixel currPixel = null;
+    Pixel newPixel = null;
+
+    // loop through the columns
+    for (int srcX=0, trgX=targetX;
+         srcX<getWidth() && trgX<target.getWidth();
+         srcX++, trgX++) {
+
+      // loop through the rows
+      for (int srcY=0, trgY=targetY;
+           srcY<getHeight() && trgY<target.getHeight();
+           srcY++, trgY++) {
+
+        // get the current pixel
+        currPixel = this.getPixel(srcX,srcY);
+
+        /* if the color at the current pixel mostly blue (blue value is
+         * greater than red and green combined), then don't copy pixel
+         */
+        if (currPixel.getRed() + currPixel.getGreen() > currPixel.getBlue()) {
+          target.getPixel(trgX,trgY).setColor(currPixel.getColor());
+        }
+      }
+    }
+  }
+  
+  /**
+   * Method to change the picture to gray scale with luminance
+   */
+  public void grayscaleWithLuminance()
+  {
+    Pixel[] pixelArray = this.getPixels();
+    Pixel pixel = null;
+    int luminance = 0;
+    double redValue = 0;
+    double greenValue = 0;
+    double blueValue = 0;
+
+    // loop through all the pixels
+    for (int i = 0; i < pixelArray.length; i++)
+    {
+      // get the current pixel
+      pixel = pixelArray[i];
+
+      // get the corrected red, green, and blue values
+      redValue = pixel.getRed() * 0.299;
+      greenValue = pixel.getGreen() * 0.587;
+      blueValue = pixel.getBlue() * 0.114;
+
+      // compute the intensity of the pixel (average value)
+      luminance = (int) (redValue + greenValue + blueValue);
+
+      // set the pixel color to the new color
+      pixel.setColor(new Color(luminance,luminance,luminance));
+
+    }
+  }
+  
+  /** 
+   * Method to do an oil paint effect on a picture
+   * @param dist the distance from the current pixel 
+   * to use in the range
+   * @return the new picture
+   */
+  public Picture oilPaint(int dist) {
+    
+    // create the picture to return
+    Picture retPict = new Picture(this.getWidth(),this.getHeight());
+    
+    // declare pixels
+    Pixel currPixel = null;
+    Pixel retPixel = null;
+    
+    // loop through the pixels
+    for (int x = 0; x < this.getWidth(); x++) {
+      for (int y = 0; y < this.getHeight(); y++) {
+        currPixel = this.getPixel(x,y);
+        retPixel = retPict.getPixel(x,y);
+        retPixel.setColor(currPixel.getMostCommonColorInRange(dist));
+      }
+    }
+    return retPict;
+  }
+  
+  /** Method to convolve a photo, taking a 2-d array of floats as input
+   * Author Kartik M.
+   * @param matrix
+   * @return
+   */
+  public Picture convolve(float [][] matrix) {
+   
+   // create a picture to return
+   Picture convolution = new Picture(this.getWidth(), this.getHeight());
+   
+   // assign the current pixel
+   Pixel currentPixel = null;
+   
+   // loop!
+   // Go through all x, y coordinates of pixels until the penultimate (so edges aren't changed)
+   
+   for (int x = 1; x < this.getWidth() - 1; x++) {
+    for (int y = 1; y < this.getHeight() - 1; y++) {
+     
+     // Define all of the adjacent pixels
+     currentPixel = this.getPixel(x, y);
+     Pixel upLeft = this.getPixel(x - 1, y - 1);
+     Pixel up = this.getPixel(x, y - 1);
+     Pixel upRight = this.getPixel(x + 1, y - 1);
+     Pixel left = this.getPixel(x - 1, y);
+     Pixel right = this.getPixel(x + 1, y);
+     Pixel downLeft = this.getPixel(x - 1, y + 1);
+     Pixel down = this.getPixel(x,  y + 1);
+     Pixel downRight = this.getPixel(x + 1, y + 1);
+     
+     // Set the R, G, B values of the current pixel to the matrix-transformed values of surrounding pixels
+     convolution.getPixel(x, y).setRed( (int) (currentPixel.getRed() * matrix[1][1] + upLeft.getRed() * matrix[0][0]
+       + up.getRed() * matrix[0][1] + upRight.getRed() * matrix[0][2] + left.getRed() * matrix [1][0] 
+         + right.getRed() * matrix[1][2] + downLeft.getRed() * matrix[2][0] + down.getRed() * matrix[2][1]
+           + downRight.getRed() * matrix[2][2]));
+     
+     convolution.getPixel(x, y).setBlue( (int) (currentPixel.getBlue() * matrix[1][1] + upLeft.getBlue() * matrix[0][0]
+       + up.getBlue() * matrix[0][1] + upRight.getBlue() * matrix[0][2] + left.getBlue() * matrix [1][0] 
+         + right.getBlue() * matrix[1][2] + downLeft.getBlue() * matrix[2][0] + down.getBlue() * matrix[2][1]
+           + downRight.getBlue() * matrix[2][2]));
+     
+     convolution.getPixel(x, y).setGreen( (int) (currentPixel.getGreen() * matrix[1][1] + upLeft.getGreen() * matrix[0][0]
+       + up.getGreen() * matrix[0][1] + upRight.getGreen() * matrix[0][2] + left.getGreen() * matrix [1][0] 
+         + right.getGreen() * matrix[1][2] + downLeft.getGreen() * matrix[2][0] + down.getGreen() * matrix[2][1]
+           + downRight.getGreen() * matrix[2][2]));
+     
+    
+
+    }
+   }
+   
+   int sety = 0;
+   int setx = 0;
+   
+   // copy the edge pixels from Picture onto convolution
+   /** not sure if this is the best way to do it, but I went through all the 
+    * pixels on the edges of the screen and copied them from the picture to convolution.
+    * 
+    */
+  
+   for (int topx = 0; topx < this.getWidth(); topx++) {    
+    convolution.getPixel(topx, sety).setColor(this.getPixel(topx, sety).getColor());
+    
+   }
+   for (int bottomx = 0; bottomx < this.getWidth(); bottomx++) {
+    convolution.getPixel(bottomx, sety).setColor(this.getPixel(bottomx, sety).getColor());
+    
+   }
+   
+   for (int lefty = 0; lefty < this.getHeight(); lefty++) {
+    convolution.getPixel(setx, lefty).setColor(this.getPixel(setx, lefty).getColor());
+    
+   }
+   
+   for (int righty = 0; righty < this.getHeight(); righty++) {
+    convolution.getPixel(setx, righty).setColor(this.getPixel(setx, righty).getColor());
+   }
+  return convolution;
+  }
+
+  
+  
+  
+  
+  /** 
+   * Author Kartik Menon
+   * Averaging colors method
+   * @param args
+   */
+  
+  public Picture mapToColorList(ArrayList<Color> colors) {
+   // initializing things
+   Picture eightColor = new Picture(this.getWidth(), this.getHeight());
+   Pixel currentPixel = null;
+   
+   // loop through all the pixels
+   for (int x = 0; x < this.getWidth(); x++) {
+      for (int y = 0; y < this.getHeight(); y++) {
+       currentPixel = eightColor.getPixel(x, y);
+       
+       currentPixel.setColor(findClosestColor(colors, this.getPixel(x, y).getColor()));
+             
+      }
+   }
+   
+  return eightColor;
+  
+  }
+  
+  
+  /**
+   * Finding the color closest to the input in a given arraylist of colors
+   * @param colors
+   * @param color2
+   * @return Color
+   */
+  public Color findClosestColor(ArrayList<Color> colors, Color color2) {
+   int j = 0;
+   double temp = 255.0;
+   
+   // looping through arraylist and finding the distance between the given color and the array elements
+   for (int i = 0; i < colors.size(); i++) {
+    double distance = Pixel.colorDistance(color2, colors.get(i));
+    if (distance < temp) {
+     temp = distance; // keep comparing distance to the next loop
+     j = i; // returning the index number so I can get it from the arraylist
+    }
+   }
+
+   return colors.get(j);
+  }
+
+  
+  
+  /** Method generating an arraylist of random colors
+   * @return an ArrayList
+   */
+  public ArrayList<Color> generateRandom(int number) {
+   ArrayList<Color> randomColors = new ArrayList<Color>();
+   
+   for (int i = 0; i < number; i++) {
+    double red = Math.random() * 255.0;
+    double green = Math.random() * 255.0;
+    double blue = Math.random() * 255.0;
+    Color random = new Color((int) red, (int) green, (int) blue);
+    randomColors.add(random);
+    
+   }
+   
+   return randomColors;
+  }
+  
+  /**
+   * Function to find the average r, g, b values of each color in an ArrayList
+   * @param colors
+   * @return centroid Color
+   */
+  public Color findCentroid(ArrayList<Color> colors) {
+   double redValue = 0;
+   double greenValue = 0;
+   double blueValue = 0;
+   
+   
+   for (int i = 0; i < colors.size(); i++) {
+    double redTemp = colors.get(i).getRed();
+    double greenTemp = colors.get(i).getGreen();
+    double blueTemp = colors.get(i).getBlue();
+    
+    redValue += redTemp;
+    greenValue += greenTemp;
+    blueValue += blueTemp;
+
+   }
+   double redCentroid = redValue / colors.size();
+   double greenCentroid = greenValue / colors.size();
+   double blueCentroid = blueValue / colors.size();
+   
+   Color centroid = new Color( (int) redCentroid, (int) greenCentroid, (int) blueCentroid);
+   return centroid;
+    
+
+  }
+  
+  /**
+   * Method to take the first n uniquely colored pixels in the image and use them as the
+   * initial centroid in K-Means.
+   * @param number
+   * @return ArrayList
+   */
+  
+  public ArrayList<Color> findUnique(int number) {
+   // get all pixels
+   Pixel [] pixelArray = this.getPixels();
+   
+   ArrayList<Color> uniquePixels = new ArrayList<Color>();
+   
+   // the first pixel selected is always going to be unique, so add that to the arraylist.
+   uniquePixels.add(pixelArray[(int) (Math.random() * (double) pixelArray.length)].getColor());
+   
+   // loop through remaining pixels, adding the first n (number) unique pixels to arraylist
+   for (int i = 0; i < pixelArray.length; i++) {
+    if (!uniquePixels.contains(pixelArray[i].getColor())) { 
+     uniquePixels.add(pixelArray[i].getColor());
+    if (uniquePixels.size() == number) {
+     break;
+    }
+    }
+   }
+   return uniquePixels;
+  }
+  
+  /**
+   * K-Means code
+   * @param number
+   * @return the k-means computed arraylist of colors
+   */
+  public ArrayList<Color> computeColors(int number) {
+   int Counter = 0;
+   // initialize the 2-d arraylist clusters and a 1-d arraylist to hold the centroids
+   ArrayList<ArrayList<Color>> clusters = new ArrayList<ArrayList<Color>>();
+   ArrayList<Color> centroids = new ArrayList<Color>();
+   
+   // so that I can compare old and new centroids for equality later
+   ArrayList<Color> oldCentroid = new ArrayList<Color>();
+   
+   // filling clusters with empty arraylists
+   for (int i = 0; i < number; i++) {
+    clusters.add(new ArrayList<Color>());
+   }
+   
+   // setting the initial color array to a random one or of the colors of the first number of unique pixels
+   //centroids = generateRandom(number);
+   centroids = findUnique(number);
+   
+   Pixel [] pixelArray = this.getPixels();
+   
+   // clustering all of the colors according to how close they are to random colors
+   // and adding them to the corresponding cluster.
+   
+  do {
+   // keep track of previous centroid, making a new arraylist keeps a copy of it
+   for (int i = 0; i < clusters.size(); i++) { 
+    clusters.get(i).clear();
+   }
+   
+   // copying the old arraylist so oldCentroid and centroids don't refer to the same arraylist object
+   oldCentroid = new ArrayList<Color>(centroids);
+   
+   // looping through all pixels and dumping them into respective cluster arraylist
+   for (int j = 0; j < pixelArray.length; j++) {
+     int index = centroids.indexOf(findClosestColor(centroids, pixelArray[j].getColor()));
+     clusters.get(index).add(pixelArray[j].getColor()); 
+   
+   }
+   
+   // resetting the centroid values to the centroid of each cluster
+   for (int i = 0; i < clusters.size(); i++) {
+    centroids.set(i, (findCentroid(clusters.get(i))));
+    //this next line was used for extra credit screenshot
+    //centroids.set(i, (findMedianCentroid(clusters.get(i))));
+   }
+   
+ Counter++;  
+ System.out.println(Counter);
+   
+  } while (!oldCentroid.equals(centroids));
+  
+  return centroids;
+  }
+  
+  
+  /** putting everything in one method
+   * 
+   * @param number
+   * @return the compressed picture
+   */
+  
+  public Picture reduceColors(int number) {
+   return mapToColorList(computeColors(number));
+  }
+  
+  
+  
+  /////////////////////// EXTRA CREDIT /////////////////////////////
+  /**
+   * Function to find the median r, g, b values of an ArrayList
+   * 
+   * @param colors
+   * @return centroid Color
+   */
+  public Color findMedianCentroid(ArrayList<Color> colors) {
+   
+   double [] medianListR = new double[colors.size()];
+   double [] medianListG = new double[colors.size()];
+   double [] medianListB = new double[colors.size()];
+   
+   for (int i = 0; i < colors.size(); i++) {
+    double redTemp = colors.get(i).getRed();
+    double greenTemp = colors.get(i).getGreen();
+    double blueTemp = colors.get(i).getBlue();
+    
+    medianListR[i] = redTemp;
+    medianListG[i] = greenTemp;
+    medianListB[i] = blueTemp;
+
+   }
+   
+   Arrays.sort(medianListR);
+   Arrays.sort(medianListG);
+   Arrays.sort(medianListB);
+
+   
+   double redCentroid = medianListR[(int) medianListR.length / 2];
+   double greenCentroid = medianListG[(int) medianListG.length / 2];
+   double blueCentroid = medianListB[(int) medianListB.length / 2];
+   
+   Color centroid = new Color( (int) redCentroid, (int) greenCentroid, (int) blueCentroid);
+   return centroid;
+  }
+
+  
+  public static void main(String[] args)
+  {
+    Picture p = 
+      new Picture(FileChooser.pickAFile());
+    
+    ArrayList<Color> list = new ArrayList<Color>();
+    list.add(Color.red);
+    list.add(Color.green);
+    list.add(Color.blue);
+    list.add(Color.cyan);
+    list.add(Color.yellow);
+    list.add(Color.black);
+    list.add(Color.white);
+    list.add(Color.orange);
+    
+    // Create some new colors!
+    Color sky = new Color(160, 200, 230);
+    Color mntn = new Color(120, 130, 155);
+    Color sand = new Color(230, 210, 160);
+    Color blackish = new Color(30, 30, 30);
+    Color sea = new Color(115, 150, 150);
+    Color shore = new Color(160, 170, 160);
+    Color trees = new Color(70, 80, 40);
+    Color trees2 = new Color(115, 130, 50);
+    
+    ArrayList<Color> kartikColors = new ArrayList<Color>();
+    kartikColors.add(sky);
+    kartikColors.add(mntn);
+    kartikColors.add(sand);
+    kartikColors.add(blackish);
+    kartikColors.add(sea);
+    kartikColors.add(shore);
+    kartikColors.add(trees);
+    kartikColors.add(trees2);
+    
+    
+    
+    //p.mapToColorList(list).explore();
+    //p.mapToColorList(kartikColors).explore(); 
+    //p.mapToColorList(p.generateRandom(8)).explore(); // or 256
+    p.reduceColors(256).explore(); // or 8. the change from unique to random occurs in function itself
+    
+    /**
+     * Comments about random and unique color selection
+     * 
+     * Random is probably a better color selection, because you're more likely to get a wider spread
+     * of colors initially, so clustering will take less time. Unique colors don't have to be that "unique"
+     * for the computer to think they're different (i.e., the color (30, 30, 30) is visually not really 
+     * different from (31, 30, 30), but the computer will count this as unique.
+     * 
+     * Given that a picture is likely to have similar colors in any one given area, it is likely
+     * that the clustering will start off with very similar colors and will be slower.
+     */
+    
+    
+    
+
+  }
+        
+} // this } is the end of class Picture, put all new methods before this
+ 
